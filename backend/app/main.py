@@ -43,7 +43,7 @@ CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "900"))
 USER_AGENT = "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/132.0 Safari/537.36"
 _CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
 
-app = FastAPI(title="SocialRecipeApp Backend", version="3.1.0")
+app = FastAPI(title="SocialRecipeApp Backend", version="3.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -66,6 +66,7 @@ class ImportResponse(BaseModel):
     ingredients: str
     procedure: str
     notes: str = ""
+    sourceText: str = ""
     imageUrl: Optional[str] = None
     sourcePlatform: str = "Web / Altro"
     usedAi: bool = False
@@ -385,6 +386,7 @@ def direct_recipe(bundle: Dict[str, Any]) -> Optional[ImportResponse]:
         ingredients="\n".join(f"- {x}" for x in ingredients),
         procedure="\n".join(f"{i+1}. {x}" for i, x in enumerate(steps)),
         notes="Ricetta ricavata dai dati strutturati della pagina.",
+        sourceText=clean(bundle.get("description", "")),
         imageUrl=bundle.get("image"), sourcePlatform=bundle.get("platform", "Web / Altro"),
         usedAi=False, extractionMethod=" + ".join(bundle.get("methods") or ["JSON-LD"]),
         confidence=90, translated=False, transcriptionUsed=False, recipeDetected=True,
@@ -423,7 +425,7 @@ CONTENUTO:\n{source}"""
         return ImportResponse(
             title=clean(data.get("title")) or bundle.get("title") or "Ricetta importata",
             ingredients=clean(data.get("ingredients")), procedure=clean(data.get("procedure")),
-            notes=clean(data.get("notes")), imageUrl=bundle.get("image"), sourcePlatform=bundle.get("platform", "Web / Altro"),
+            notes=clean(data.get("notes")), sourceText=clean(bundle.get("description", "")), imageUrl=bundle.get("image"), sourcePlatform=bundle.get("platform", "Web / Altro"),
             usedAi=True, extractionMethod=" + ".join(dict.fromkeys(bundle.get("methods") or ["AI"])),
             confidence=max(0, min(100, int(data.get("confidence", 0) or 0))),
             detectedLanguage=clean(data.get("detectedLanguage")) or None, translated=bool(data.get("translated", False)),
@@ -458,6 +460,7 @@ def heuristic(bundle: Dict[str, Any], warnings: List[str], transcription_used: b
         ingredients="\n".join(f"- {x}" for x in ingredients),
         procedure="\n".join(f"{i+1}. {x}" for i, x in enumerate(steps)),
         notes="Estrazione prudente senza invenzioni: verifica eventuali campi mancanti.",
+        sourceText=clean(bundle.get("description", "")),
         imageUrl=bundle.get("image"), sourcePlatform=bundle.get("platform", "Web / Altro"),
         usedAi=False, extractionMethod=" + ".join(dict.fromkeys(bundle.get("methods") or ["fallback"])),
         confidence=45 if detected else 10, translated=False, transcriptionUsed=transcription_used,
@@ -493,13 +496,13 @@ def process(payload: ImportRequest) -> ImportResponse:
 
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "SocialRecipeApp Backend", "version": "3.1.0", "docs": "/docs"}
+    return {"status": "ok", "service": "SocialRecipeApp Backend", "version": "3.2.0", "docs": "/docs"}
 
 
 @app.get("/health")
 def health():
     return {
-        "ok": True, "version": "3.1.0",
+        "ok": True, "version": "3.2.0",
         "openaiConfigured": bool(OPENAI_API_KEY and OpenAI is not None),
         "youtubeApiConfigured": bool(YOUTUBE_API_KEY),
         "model": OPENAI_MODEL, "transcribeModel": TRANSCRIBE_MODEL,
