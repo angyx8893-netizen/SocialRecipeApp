@@ -6,7 +6,7 @@ patch_legacy(legacy)
 from .main_legacy import *  # noqa: F401,F403,E402
 from .image_routes import register_image_routes  # noqa: E402
 
-app.version = "3.5.0"
+app.version = "3.6.0"
 
 # Sostituisce il vecchio /health con una risposta che include lo stato Meta.
 app.router.routes = [
@@ -16,11 +16,12 @@ app.router.routes = [
 
 
 @app.get("/health")
-def health_v35():
+def health_v36():
     data = legacy.health()
-    data["version"] = "3.5.0"
+    data["version"] = "3.6.0"
     data["metaOembedConfigured"] = meta_configured()
     data["metaGraphVersion"] = META_GRAPH_VERSION
+    data["metaOembedTokenless"] = True
     return data
 
 
